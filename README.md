@@ -1,8 +1,7 @@
 # feiyang-maintenance-scheduler
-
-> 仓库：https://github.com/JerryThe-cat/feiyang-maintenance-scheduler
-
-飞扬俱乐部大修活动自动化排班工具，基于飞书开放平台的企业自建应用：读取指定多维表格 → 按规则自动排班 → 回填结果。
+  
+# 飞扬俱乐部大修活动自动化排班工具
+基于飞书开放平台的企业自建应用：读取指定多维表格 → 按规则自动排班 → 回填结果。
 
 ## 项目结构
 
@@ -34,8 +33,6 @@ pip install -r requirements.txt
 cp .env.example .env   # 按需修改 App ID / Secret
 python app.py          # 打开 http://127.0.0.1:5000
 ```
-
-> ⚠️ **安全提醒**：`.env` 中的 `FEISHU_APP_SECRET` 为敏感凭证，已在 `.gitignore` 中过滤。如 Secret 泄露，请在飞书开发者后台重置。
 
 ## 二、飞书侧准备
 
@@ -77,7 +74,7 @@ python main.py staff --url "https://xxx.feishu.cn/base/<app_token>?table=<table_
 python main.py technician --url "..." --dry-run
 ```
 
-## 五、排班规则（与需求一致）
+## 五、排班规则
 
 ### 干事
 
@@ -118,11 +115,3 @@ python -m tests.test_scheduler
 nginx 反向代理 + certbot HTTPS → 飞书开发者后台填首页 URL → 发布
 ```
 
-## 九、待确认项（开发期可再对齐）
-
-见 `需求说明.md` 第五节：
-- 字段名与实际表格是否完全一致（Web UI 支持手动指定）
-- 1/4 号位无维修部时是否由其他部门顶替（当前为**顶替**）
-- 末时段 ≥6 人的硬/软性：当前为**尽力而为**
-- 重复排班：当前为**跳过**
-- 飞书侧触发方式：当前 Web UI 即可；如需接入飞书卡片 / 机器人 / 工作流，在 `app.py` 基础上增加对应路由即可。
