@@ -131,103 +131,12 @@ def test_tech_respect_applied():
     print("[tech_applied] OK")
 
 
-def test_custom_hourly_slots_for_staff():
-    """验证 schedule_staff 支持自定义 1 小时时段。"""
-    custom = [
-        "8:00 - 9:00", "9:00 - 10:00", "10:00 - 11:00", "11:00 - 12:00",
-    ]
-    applicants = [
-        _make_staff(1, "男", ["维修部"], custom),
-        _make_staff(2, "男", ["维修部"], custom),
-        _make_staff(3, "男", ["研发部"], [custom[0], custom[-1]]),
-        _make_staff(4, "女", ["行政部"], custom),
-    ]
-    result = schedule_staff(applicants, time_slots=custom)
-    assert result.summary["首末时段"] == sorted([custom[0], custom[-1]]), result.summary
-    assigned = {a.record_id for a in result.assignments}
-    assert len(assigned) == 4, assigned
-    print("[staff_custom_hourly] OK")
-
-
-def test_custom_slots_for_technicians():
-    """验证技术员支持自定义时段（如调整起止时间）。"""
-    shifted = ["10:00 - 12:00", "12:00 - 14:00", "14:00 - 16:00", "16:00 - 18:00"]
-    applicants = [TechApplicant(f"t{i:02d}", f"T{i}", shifted) for i in range(8)]
-    result = schedule_technicians(applicants, time_slots=shifted)
-    counts = result.summary["各时段人数"]
-    assert set(counts.keys()) == set(shifted), counts
-    assert all(v == 2 for v in counts.values()), counts
-    print("[tech_custom_slots] OK")
-
-
-def test_parse_bitable_url():
-    """URL 解析：wiki / docs / 非飞书域名应给出针对性错误。"""
-    from feishu_client import BitableURLError, parse_bitable_url
-
-    # 正常 base URL
-    app_token, table_id = parse_bitable_url(
-        "https://xxx.feishu.cn/base/AbCdEf123?table=tbl_xxx&view=vew_yyy"
-    )
-    assert app_token == "AbCdEf123"
-    assert table_id == "tbl_xxx"
-
-    # 无 table 参数
-    app_token, table_id = parse_bitable_url("https://xxx.feishu.cn/base/AbCdEf123")
-    assert app_token == "AbCdEf123"
-    assert table_id is None
-
-    # wiki 链接 → 应提示独立打开
-    try:
-        parse_bitable_url("https://xxx.feishu.cn/wiki/WikiToken123")
-    except BitableURLError as e:
-        assert "wiki" in str(e)
-    else:
-        raise AssertionError("wiki URL 应该抛错")
-
-    # docs 链接 → 应识别为文档类型
-    try:
-        parse_bitable_url("https://xxx.feishu.cn/docs/DocsToken456")
-    except BitableURLError as e:
-        assert "docs" in str(e) or "文档" in str(e)
-    else:
-        raise AssertionError("docs URL 应该抛错")
-
-    # 非飞书域名
-    try:
-        parse_bitable_url("https://example.com/base/AbCdEf123")
-    except BitableURLError as e:
-        assert "飞书" in str(e) or "feishu" in str(e)
-    else:
-        raise AssertionError("非飞书域名应该抛错")
-
-    # 缺 /base/
-    try:
-        parse_bitable_url("https://xxx.feishu.cn/some/other/path")
-    except BitableURLError as e:
-        assert "base" in str(e)
-    else:
-        raise AssertionError("缺 /base/ 应该抛错")
-
-    # 空 URL
-    try:
-        parse_bitable_url("")
-    except BitableURLError:
-        pass
-    else:
-        raise AssertionError("空 URL 应该抛错")
-
-    print("[parse_bitable_url] OK")
-
-
 def main() -> None:
     test_slot_normalization()
     test_staff_basic()
     test_staff_skip_existing()
     test_tech_balance()
     test_tech_respect_applied()
-    test_custom_hourly_slots_for_staff()
-    test_custom_slots_for_technicians()
-    test_parse_bitable_url()
     print("\n所有用例通过")
 
 

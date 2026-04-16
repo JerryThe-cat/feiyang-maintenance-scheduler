@@ -170,10 +170,6 @@ def _chunked(seq: List[Any], size: int) -> Iterable[List[Any]]:
 # ---------- URL 解析工具 ----------
 
 
-class BitableURLError(ValueError):
-    """URL 解析失败时抛出，附带用户可读的说明。"""
-
-
 def parse_bitable_url(url: str) -> Tuple[str, Optional[str]]:
     """从多维表格 URL 中解析 app_token 与 table_id。
 
@@ -183,43 +179,16 @@ def parse_bitable_url(url: str) -> Tuple[str, Optional[str]]:
     """
     from urllib.parse import urlparse, parse_qs
 
-    raw = (url or "").strip()
-    if not raw:
-        raise BitableURLError("请粘贴多维表格 URL")
-
-    parsed = urlparse(raw)
-    host = (parsed.netloc or "").lower()
+    parsed = urlparse(url.strip())
     parts = [p for p in parsed.path.split("/") if p]
-
-    # 明显不是飞书域名
-    if host and not (host.endswith("feishu.cn") or host.endswith("larksuite.com")):
-        raise BitableURLError(
-            f"这不是飞书域名下的链接（host={host}）。请粘贴 feishu.cn 或 larksuite.com 的多维表格 URL。"
-        )
-
-    # wiki 包装：从 wiki 文档打开的 bitable，路径是 /wiki/<wiki_token>
-    if "wiki" in parts:
-        raise BitableURLError(
-            "这是「飞书 wiki 链接」，不是多维表格的原始 URL。请在 wiki 里打开这张表 → "
-            "点击右上角「…」→ 选择「在新窗口打开」或「独立页面打开」→ 再复制那个地址栏里的 URL（会含 /base/<app_token>）。"
-        )
-
-    # docs / sheets / mindnotes 等其他文档类型
-    for other in ("docs", "docx", "sheets", "file", "mindnotes", "slides", "minutes"):
-        if other in parts:
-            raise BitableURLError(
-                f"这似乎是飞书「{other}」文档链接，不是多维表格。请确保 URL 中包含 /base/<app_token>。"
-            )
-
     app_token: Optional[str] = None
     if "base" in parts:
         idx = parts.index("base")
         if idx + 1 < len(parts):
             app_token = parts[idx + 1]
     if not app_token:
-        raise BitableURLError(
-            "URL 里没有找到 /base/<app_token> 段。请从飞书多维表格页面的地址栏直接复制 URL，"
-            "标准格式：https://xxx.feishu.cn/base/<app_token>?table=<table_id>"
+        raise ValueError(
+            "这似乎不是飞书多维表格链接。正确格式：https://xxx.feishu.cn/base/<app_token>?table=<table_id>"
         )
 
     qs = parse_qs(parsed.query)

@@ -126,34 +126,24 @@ def _filter_valid_slots(slots: Sequence[str], valid: Sequence[str]) -> List[str]
     return filtered
 
 
-def _active_time_slots(
-    applicants: Sequence[StaffApplicant], valid_slots: Sequence[str]
-) -> List[str]:
-    """取当次活动实际启用的时段（按出现过的合法时段取集合，保持 valid_slots 顺序）。"""
-    valid_set = set(valid_slots)
+def _active_time_slots(applicants: Sequence[StaffApplicant]) -> List[str]:
+    """取当次活动实际启用的时段（按出现过的合法时段取集合，保持默认顺序）。"""
     used = set()
     for a in applicants:
         for s in a.applied_slots:
-            if s in valid_set:
+            if s in STAFF_TIME_SLOTS:
                 used.add(s)
-    return [s for s in valid_slots if s in used]
+    return [s for s in STAFF_TIME_SLOTS if s in used]
 
 
-def schedule_staff(
-    raw_applicants: Sequence[StaffApplicant],
-    time_slots: Optional[Sequence[str]] = None,
-) -> StaffScheduleResult:
-    """核心调度：贪心 + 多轮优先级。
-
-    time_slots: 可选。传入则覆盖 config.STAFF_TIME_SLOTS，顺序决定首末判定。
-    """
+def schedule_staff(raw_applicants: Sequence[StaffApplicant]) -> StaffScheduleResult:
+    """核心调度：贪心 + 多轮优先级。"""
     result = StaffScheduleResult()
-    valid_slots: List[str] = list(time_slots) if time_slots else list(STAFF_TIME_SLOTS)
 
     # 规范化：过滤暂定，去除已排班的人
     applicants: List[StaffApplicant] = []
     for a in raw_applicants:
-        a.applied_slots = _filter_valid_slots(a.applied_slots, valid_slots)
+        a.applied_slots = _filter_valid_slots(a.applied_slots, STAFF_TIME_SLOTS)
         if a.already_scheduled:
             result.skipped.append(a.record_id)
             continue
@@ -163,7 +153,7 @@ def schedule_staff(
             continue
         applicants.append(a)
 
-    active_slots = _active_time_slots(applicants, valid_slots)
+    active_slots = _active_time_slots(applicants)
     if not active_slots:
         result.summary = {"message": "无有效报名数据", "slots": {}}
         return result
@@ -347,20 +337,13 @@ def _build_staff_summary(
 # ---------- 技术员排班 ----------
 
 
-def schedule_technicians(
-    raw_applicants: Sequence[TechApplicant],
-    time_slots: Optional[Sequence[str]] = None,
-) -> TechScheduleResult:
-    """技术员排班：平衡各时段人数，不涉及点位。
-
-    time_slots: 可选。传入则覆盖 config.TECH_TIME_SLOTS。
-    """
+def schedule_technicians(raw_applicants: Sequence[TechApplicant]) -> TechScheduleResult:
+    """技术员排班：平衡各时段人数，不涉及点位。"""
     result = TechScheduleResult()
-    valid_slots: List[str] = list(time_slots) if time_slots else list(TECH_TIME_SLOTS)
 
     applicants: List[TechApplicant] = []
     for a in raw_applicants:
-        a.applied_slots = _filter_valid_slots(a.applied_slots, valid_slots)
+        a.applied_slots = _filter_valid_slots(a.applied_slots, TECH_TIME_SLOTS)
         if a.already_scheduled:
             result.skipped.append(a.record_id)
             continue
@@ -372,7 +355,7 @@ def schedule_technicians(
     # 按报名时段数升序处理（灵活度低的优先固定），稳定排序保证可重现
     applicants.sort(key=lambda x: (len(x.applied_slots), x.name))
 
-    slot_counts: Dict[str, int] = {s: 0 for s in valid_slots}
+    slot_counts: Dict[str, int] = {s: 0 for s in TECH_TIME_SLOTS}
     for a in applicants:
         # 在其报名时段中，选当前人数最少的（负载均衡）
         target = min(a.applied_slots, key=lambda s: slot_counts[s])

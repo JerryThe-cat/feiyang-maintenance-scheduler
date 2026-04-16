@@ -353,43 +353,6 @@
       overflow-x: auto; max-height: 260px; overflow-y: auto; line-height: 1.55;
     }
 
-    /* ===== Slot config ===== */
-    .slot-config { background: var(--bg-input); border: 1px solid var(--border);
-      border-radius: var(--radius-sm); padding: 14px 16px; }
-    .slot-config-toolbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
-      margin-bottom: 12px; }
-    .slot-config-toolbar .btn { padding: 7px 14px; font-size: 12.5px; }
-    .slot-config-toolbar .btn svg { width: 13px; height: 13px; }
-
-    .chip-list { display: flex; flex-wrap: wrap; gap: 8px; min-height: 32px; margin-bottom: 10px; }
-    .chip-list:empty::before {
-      content: '尚未配置任何时段，点击上方"从表格读取"或"恢复默认"。';
-      color: var(--text-tertiary); font-size: 12.5px;
-    }
-    .chip {
-      display: inline-flex; align-items: center; gap: 6px;
-      padding: 5px 6px 5px 12px; background: #fff; border: 1px solid var(--border);
-      border-radius: var(--radius-full); font-size: 13px; color: var(--text-primary);
-      font-variant-numeric: tabular-nums;
-    }
-    .chip .chip-x {
-      display: inline-flex; align-items: center; justify-content: center;
-      width: 20px; height: 20px; border-radius: 50%;
-      color: var(--text-tertiary); cursor: pointer;
-      transition: all 0.15s;
-    }
-    .chip .chip-x:hover { background: var(--accent-subtle); color: var(--accent); }
-
-    .slot-add-row { display: flex; gap: 8px; }
-    .slot-add-row input {
-      flex: 1; padding: 8px 12px; background: #fff;
-      border: 1px solid var(--border); border-radius: var(--radius-sm);
-      font-size: 13px; color: var(--text-primary);
-      font-family: inherit;
-    }
-    .slot-add-row input:focus { outline: none; border-color: var(--border-focus); }
-    .slot-add-row .btn { padding: 8px 14px; font-size: 13px; }
-
     /* ===== Spinner ===== */
     .spinner {
       display: inline-block; width: 16px; height: 16px;
@@ -517,31 +480,6 @@
         <input type="hidden" id="dryRun" value="0" />
       </div>
 
-      <details id="slotConfig">
-        <summary>时间段配置（默认使用内置 5 段 / 4 段；特殊情况可改）</summary>
-        <div class="slot-config">
-          <div class="slot-config-toolbar">
-            <button id="slotLoadBtn" class="btn btn-ghost" type="button">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
-              从表格读取
-            </button>
-            <button id="slotResetBtn" class="btn btn-ghost" type="button">恢复默认</button>
-            <span class="hint" id="slotSourceHint" style="margin-left:auto;"></span>
-          </div>
-
-          <div class="chip-list" id="slotChips"></div>
-
-          <div class="slot-add-row">
-            <input id="slotAddInput" type="text" placeholder="如 8:00 - 9:00（回车或点加号添加）" />
-            <button id="slotAddBtn" class="btn btn-ghost" type="button">+ 添加</button>
-          </div>
-
-          <div class="hint" style="margin-top: 8px;">
-            ⚠️ 自定义时段后，请确保表格中<b>单选「安排时间段」</b>字段里也有对应的选项值，否则写回时飞书会报错。顺序决定<b>首末时段</b>判定（首段 / 末段用于优先男性和 ≥6 人）。
-          </div>
-        </div>
-      </details>
-
       <details>
         <summary>自定义字段名映射</summary>
         <div id="staffFields" class="field-grid">
@@ -603,102 +541,7 @@
         const mode = document.querySelector('input[name=mode]:checked').value;
         $('staffFields').style.display = mode === 'staff' ? '' : 'none';
         $('techFields').style.display = mode === 'technician' ? '' : 'none';
-        // 模式切换时也重置时段到默认
-        resetSlots();
       });
-    });
-
-    /* ---- Time slots config ---- */
-    const DEFAULT_STAFF_SLOTS = [
-      '8:00 - 10:00', '10:00 - 12:00', '12:00 - 14:00', '14:00 - 16:00', '16:00 - 18:00',
-    ];
-    const DEFAULT_TECH_SLOTS = [
-      '9:00 - 11:00', '11:00 - 13:00', '13:00 - 15:00', '15:00 - 17:00',
-    ];
-    let currentSlots = [...DEFAULT_STAFF_SLOTS];
-    let slotSource = '默认';
-
-    function currentMode() { return document.querySelector('input[name=mode]:checked').value; }
-    function defaultSlotsForMode() {
-      return currentMode() === 'staff' ? DEFAULT_STAFF_SLOTS : DEFAULT_TECH_SLOTS;
-    }
-    function renderSlots() {
-      const box = $('slotChips');
-      box.innerHTML = '';
-      currentSlots.forEach((s, idx) => {
-        const chip = document.createElement('span');
-        chip.className = 'chip';
-        chip.innerHTML = `${s}<span class="chip-x" data-idx="${idx}" title="删除">×</span>`;
-        box.appendChild(chip);
-      });
-      box.querySelectorAll('.chip-x').forEach(el => {
-        el.addEventListener('click', () => {
-          currentSlots.splice(+el.dataset.idx, 1);
-          renderSlots();
-        });
-      });
-      const hint = $('slotSourceHint');
-      hint.innerText = `当前：${currentSlots.length} 段 · 来源：${slotSource}`;
-    }
-    function resetSlots() {
-      currentSlots = [...defaultSlotsForMode()];
-      slotSource = '默认';
-      renderSlots();
-    }
-    resetSlots();
-
-    $('slotResetBtn').addEventListener('click', resetSlots);
-
-    $('slotAddBtn').addEventListener('click', addSlotFromInput);
-    $('slotAddInput').addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') { e.preventDefault(); addSlotFromInput(); }
-    });
-    function addSlotFromInput() {
-      const v = $('slotAddInput').value.trim();
-      if (!v) return;
-      if (currentSlots.includes(v)) { $('slotAddInput').value = ''; return; }
-      currentSlots.push(v);
-      slotSource = '手动编辑';
-      $('slotAddInput').value = '';
-      renderSlots();
-    }
-
-    $('slotLoadBtn').addEventListener('click', async () => {
-      const tableId = $('tableSel').value;
-      if (!appToken || !tableId) { $('err2').innerText = '请先加载并选择数据表'; return; }
-      $('err2').innerText = '';
-      const btn = $('slotLoadBtn');
-      btn.disabled = true;
-      const origHtml = btn.innerHTML;
-      btn.innerHTML = '<span class="spinner"></span> 读取中…';
-      try {
-        // 取当前"自定义字段名映射"里填的「报名时间段」字段名，没填就用默认
-        const mode = currentMode();
-        const fieldsRoot = mode === 'staff' ? $('staffFields') : $('techFields');
-        const customName = fieldsRoot.querySelector('input[data-key=applied_slots]').value.trim();
-        const fieldName = customName || '报名时间段';
-        const res = await fetch('/api/field-options', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ app_token: appToken, table_id: tableId, field_name: fieldName }),
-        });
-        const data = await res.json();
-        if (!data.ok) { $('err2').innerText = data.error; return; }
-        // 过滤"暂定"这类不参与排班的选项
-        const opts = (data.options || []).filter(o => !/暂定|不参加|空/.test(o));
-        if (opts.length === 0) {
-          $('err2').innerText = `字段「${fieldName}」没有可用选项`;
-          return;
-        }
-        currentSlots = opts;
-        slotSource = `表格字段「${fieldName}」`;
-        renderSlots();
-      } catch (e) {
-        $('err2').innerText = '请求失败：' + e.message;
-      } finally {
-        btn.disabled = false;
-        btn.innerHTML = origHtml;
-      }
     });
 
     /* ---- Dry-run toggle ---- */
@@ -840,7 +683,6 @@
             mode,
             dry_run: $('dryRun').value === '1',
             fields,
-            time_slots: currentSlots,
           }),
         });
         const data = await res.json();
