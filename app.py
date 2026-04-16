@@ -66,7 +66,13 @@ def api_list_tables():
         client = _get_client()
         tables = client.list_tables(app_token)
     except FeishuAPIError as exc:
-        return jsonify({"ok": False, "error": str(exc)}), 502
+        hint = ""
+        if exc.code in (91403, 99991672, 1254030, 1254040):
+            hint = (
+                "（很可能是权限问题：请在该多维表格右上角「…」→「更多」→「添加文档应用」，"
+                "把本应用加为协作者并给予「可编辑」权限；或确认应用已在开放平台发布新版本并通过审核）"
+            )
+        return jsonify({"ok": False, "error": f"{exc}{hint}"}), 502
     except Exception as exc:  # noqa: BLE001
         logger.exception("list_tables failed")
         return jsonify({"ok": False, "error": f"未知错误：{exc}"}), 500
@@ -124,6 +130,52 @@ def api_inspect():
     )
 
 
+@app.route("/api/field-options", methods=["POST"])
+def api_field_options():
+    """读取某个单选/多选字段的选项列表。用于前端自动填充"时间段选项"。"""
+    payload = request.get_json(silent=True) or {}
+    app_token = (payload.get("app_token") or "").strip()
+    table_id = (payload.get("table_id") or "").strip()
+    field_name = (payload.get("field_name") or "").strip()
+    if not app_token or not table_id or not field_name:
+        return jsonify({"ok": False, "error": "缺少 app_token / table_id / field_name"}), 400
+
+    try:
+        client = _get_client()
+        fields = client.list_fields(app_token, table_id)
+    except FeishuAPIError as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 502
+    except Exception as exc:  # noqa: BLE001
+        logger.exception("field-options failed")
+        return jsonify({"ok": False, "error": f"未知错误：{exc}"}), 500
+
+    target = None
+    for f in fields:
+        name = f.get("field_name") or f.get("name")
+        if name == field_name:
+            target = f
+            break
+    if target is None:
+        return jsonify({"ok": False, "error": f"未找到字段：{field_name}"}), 404
+
+    options: List[str] = []
+    prop = target.get("property") or {}
+    for opt in prop.get("options") or []:
+        if isinstance(opt, dict):
+            nm = opt.get("name")
+            if isinstance(nm, str) and nm.strip():
+                options.append(nm.strip())
+
+    return jsonify(
+        {
+            "ok": True,
+            "field_name": field_name,
+            "field_type": target.get("type"),
+            "options": options,
+        }
+    )
+
+
 @app.route("/api/schedule", methods=["POST"])
 def api_schedule():
     """执行排班并回填。"""
@@ -133,6 +185,10 @@ def api_schedule():
     mode = (payload.get("mode") or "").strip()  # "staff" | "technician"
     dry_run = bool(payload.get("dry_run"))
     custom_fields: Dict[str, str] = payload.get("fields") or {}
+
+    # 可选的自定义时段；若为空则使用 config 默认值
+    raw_slots = payload.get("time_slots") or []
+    time_slots: List[str] = [s.strip() for s in raw_slots if isinstance(s, str) and s.strip()]
 
     if not app_token or not table_id or mode not in ("staff", "technician"):
         return jsonify({"ok": False, "error": "缺少必要参数"}), 400
@@ -157,7 +213,7 @@ def api_schedule():
             or FIELD_STAFF_ASSIGNED_POSITION,
         }
         applicants = build_staff_applicants(records, field_map)
-        result = schedule_staff(applicants)
+        result = schedule_staff(applicants, time_slots=time_slots or None)
         updates = [
             (
                 a.record_id,
@@ -190,7 +246,7 @@ def api_schedule():
             "assigned_slot": custom_fields.get("assigned_slot") or FIELD_TECH_ASSIGNED_SLOT,
         }
         applicants = build_tech_applicants(records, field_map)
-        result = schedule_technicians(applicants)
+        result = schedule_technicians(applicants, time_slots=time_slots or None)
         updates = [
             (a.record_id, {field_map["assigned_slot"]: a.slot})
             for a in result.assignments
