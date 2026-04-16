@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <title>大修活动自动化排班</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+    :root {
+      --bg-page: #F5EEE6;
+      --bg-card: #FFFFFF;
+      --bg-input: #FAF7F4;
+      --bg-result: #2D2B28;
+
+      --text-primary: #1A1714;
+      --text-secondary: #6E635A;
+      --text-tertiary: #9B9189;
+      --text-inverse: #E8E2DB;
+
+      --accent: #C4704A;
+      --accent-hover: #A85C3A;
+      --accent-subtle: rgba(196, 112, 74, 0.08);
+
+      --border: #E2DCD5;
+      --border-focus: #C4704A;
+      --border-card: rgba(0,0,0,0.06);
+
+      --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
+      --shadow-card: 0 1px 3px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.03);
+      --shadow-hover: 0 2px 8px rgba(0,0,0,0.06), 0 8px 24px rgba(0,0,0,0.05);
+
+      --radius-sm: 10px;
+      --radius-md: 16px;
+      --radius-lg: 24px;
+      --radius-full: 9999px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg-page);
+      color: var(--text-primary);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+      line-height: 1.6;
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ===== Header ===== */
+    .header {
+      padding: 20px 0;
+      border-bottom: 1px solid var(--border);
+      background: rgba(245, 238, 230, 0.85);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      position: sticky; top: 0; z-index: 10;
+    }
+    .header-inner {
+      max-width: 720px; margin: 0 auto; padding: 0 24px;
+      display: flex; align-items: center; gap: 14px;
+    }
+    .logo-icon {
+      width: 36px; height: 36px; border-radius: var(--radius-sm);
+      background: var(--accent); display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .logo-icon svg { width: 20px; height: 20px; }
+    .header-title { font-size: 16px; font-weight: 600; color: var(--text-primary); letter-spacing: -0.01em; }
+    .header-tag {
+      font-size: 11px; font-weight: 500; color: var(--accent);
+      background: var(--accent-subtle); padding: 3px 10px; border-radius: var(--radius-full);
+      letter-spacing: 0.02em;
+    }
+
+    /* ===== Main ===== */
+    .main {
+      max-width: 720px; margin: 0 auto; padding: 32px 24px 64px;
+    }
+
+    .hero {
+      text-align: center; padding: 40px 0 36px;
+    }
+    .hero h1 {
+      font-size: 28px; font-weight: 700; letter-spacing: -0.03em;
+      color: var(--text-primary); margin-bottom: 10px; line-height: 1.25;
+    }
+    .hero p {
+      font-size: 15px; color: var(--text-secondary); max-width: 480px; margin: 0 auto;
+      line-height: 1.65;
+    }
+
+    /* ===== Step indicator ===== */
+    .steps {
+      display: flex; gap: 8px; margin-bottom: 24px;
+    }
+    .step-pill {
+      flex: 1; height: 4px; border-radius: var(--radius-full);
+      background: var(--border); transition: background 0.35s ease;
+    }
+    .step-pill.active { background: var(--accent); }
+    .step-pill.done { background: var(--accent); opacity: 0.5; }
+
+    /* ===== Card ===== */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-card);
+      border-radius: var(--radius-lg);
+      padding: 28px;
+      margin-bottom: 20px;
+      box-shadow: var(--shadow-card);
+      transition: box-shadow 0.25s ease;
+    }
+    .card:hover { box-shadow: var(--shadow-hover); }
+    .card-header {
+      display: flex; align-items: center; gap: 12px;
+      margin-bottom: 20px;
+    }
+    .card-step {
+      width: 28px; height: 28px; border-radius: var(--radius-full);
+      background: var(--accent); color: #fff; font-size: 13px; font-weight: 600;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .card-title {
+      font-size: 16px; font-weight: 600; color: var(--text-primary);
+      letter-spacing: -0.01em;
+    }
+
+    /* ===== Form controls ===== */
+    label.field-label {
+      display: block; font-size: 13px; font-weight: 500;
+      color: var(--text-secondary); margin-bottom: 6px;
+    }
+
+    input[type=text], select {
+      width: 100%; padding: 11px 14px;
+      border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+      font-size: 14px; font-family: inherit;
+      background: var(--bg-input); color: var(--text-primary);
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+    input[type=text]::placeholder { color: var(--text-tertiary); }
+    input[type=text]:focus, select:focus {
+      outline: none; border-color: var(--border-focus);
+      box-shadow: 0 0 0 3px var(--accent-subtle);
+    }
+
+    /* radio / checkbox */
+    .mode-selector {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 4px;
+    }
+    .mode-option {
+      position: relative; cursor: pointer;
+    }
+    .mode-option input[type=radio] {
+      position: absolute; opacity: 0; pointer-events: none;
+    }
+    .mode-option .mode-card {
+      padding: 16px 18px; border: 1.5px solid var(--border); border-radius: var(--radius-md);
+      background: var(--bg-input); text-align: center; transition: all 0.2s ease;
+    }
+    .mode-option input:checked + .mode-card {
+      border-color: var(--accent);
+      background: var(--accent-subtle);
+      box-shadow: 0 0 0 3px var(--accent-subtle);
+    }
+    .mode-card .mode-icon {
+      width: 40px; height: 40px; margin: 0 auto 10px;
+      border-radius: var(--radius-sm); background: var(--bg-card);
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: var(--shadow-sm);
+    }
+    .mode-card .mode-icon svg { width: 20px; height: 20px; color: var(--accent); }
+    .mode-card .mode-label {
+      font-size: 14px; font-weight: 600; color: var(--text-primary);
+    }
+    .mode-card .mode-desc {
+      font-size: 12px; color: var(--text-tertiary); margin-top: 3px;
+    }
+
+    .toggle-row {
+      display: flex; align-items: center; gap: 10px; margin-top: 18px;
+    }
+    .toggle {
+      position: relative; width: 42px; height: 24px;
+      background: var(--border); border-radius: var(--radius-full);
+      cursor: pointer; transition: background 0.25s ease; flex-shrink: 0;
+    }
+    .toggle::after {
+      content: ''; position: absolute; top: 3px; left: 3px;
+      width: 18px; height: 18px; border-radius: 50%;
+      background: #fff; box-shadow: var(--shadow-sm);
+      transition: transform 0.25s ease;
+    }
+    .toggle.active { background: var(--accent); }
+    .toggle.active::after { transform: translateX(18px); }
+    .toggle-label { font-size: 13px; color: var(--text-secondary); cursor: pointer; user-select: none; }
+
+    /* ===== Buttons ===== */
+    .btn-group {
+      display: flex; gap: 10px; margin-top: 22px;
+    }
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      padding: 11px 24px; border-radius: var(--radius-full);
+      font-size: 14px; font-weight: 500; font-family: inherit;
+      cursor: pointer; border: none; transition: all 0.2s ease;
+      line-height: 1;
+    }
+    .btn-primary {
+      background: var(--text-primary); color: #fff;
+    }
+    .btn-primary:hover { background: #302D28; transform: translateY(-1px); box-shadow: var(--shadow-hover); }
+    .btn-primary:active { transform: translateY(0); }
+    .btn-primary:disabled {
+      opacity: 0.45; cursor: not-allowed;
+      transform: none; box-shadow: none;
+    }
+    .btn svg { width: 16px; height: 16px; }
+    .btn-ghost {
+      background: transparent; color: var(--text-secondary);
+      border: 1.5px solid var(--border);
+    }
+    .btn-ghost:hover {
+      background: var(--bg-input); border-color: var(--text-tertiary);
+    }
+
+    .btn-accent {
+      background: var(--accent); color: #fff;
+    }
+    .btn-accent:hover { background: var(--accent-hover); transform: translateY(-1px); box-shadow: var(--shadow-hover); }
+    .btn-accent:active { transform: translateY(0); }
+    .btn-accent:disabled { opacity: 0.45; cursor: not-allowed; transform: none; box-shadow: none; }
+
+    /* ===== Hints & errors ===== */
+    .hint {
+      font-size: 12px; color: var(--text-tertiary); margin-top: 6px; line-height: 1.5;
+    }
+    .error-msg {
+      display: flex; align-items: flex-start; gap: 8px;
+      padding: 10px 14px; margin-top: 14px;
+      background: #FEF2F2; border: 1px solid #FECACA; border-radius: var(--radius-sm);
+      color: #991B1B; font-size: 13px; line-height: 1.5;
+      word-break: break-all; overflow-wrap: anywhere;
+      max-width: 100%;
+    }
+    .error-msg:empty { display: none; }
+    .error-msg svg { flex-shrink: 0; margin-top: 1px; }
+
+    .success-msg {
+      display: flex; align-items: flex-start; gap: 8px;
+      padding: 10px 14px; margin-top: 14px;
+      background: #F0FDF4; border: 1px solid #BBF7D0; border-radius: var(--radius-sm);
+      color: #166534; font-size: 13px; line-height: 1.5;
+      word-break: break-word; overflow-wrap: anywhere;
+      max-width: 100%;
+    }
+    .success-msg:empty { display: none; }
+
+    /* ===== Details / Advanced ===== */
+    details {
+      margin-top: 18px; border-top: 1px solid var(--border); padding-top: 16px;
+    }
+    details > summary {
+      cursor: pointer; font-size: 13px; font-weight: 500;
+      color: var(--text-tertiary); list-style: none;
+      display: flex; align-items: center; gap: 6px;
+      transition: color 0.2s;
+    }
+    details > summary::-webkit-details-marker { display: none; }
+    details > summary::before {
+      content: ''; display: inline-block; width: 16px; height: 16px;
+      background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' viewBox='0 0 24 24' stroke='%239B9189' stroke-width='2'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M9 5l7 7-7 7'/%3E%3C/svg%3E") center/contain no-repeat;
+      transition: transform 0.2s ease; flex-shrink: 0;
+    }
+    details[open] > summary::before { transform: rotate(90deg); }
+    details[open] > summary { color: var(--text-secondary); margin-bottom: 14px; }
+
+    .field-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 14px;
+    }
+    .field-grid label.field-label { margin-bottom: 4px; }
+
+    /* ===== Table select tag ===== */
+    .table-selected-tag {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 6px 12px; background: var(--accent-subtle);
+      border-radius: var(--radius-full); font-size: 13px; color: var(--accent);
+      font-weight: 500; margin-top: 12px;
+    }
+    .table-selected-tag svg { width: 14px; height: 14px; }
+
+    /* ===== Result ===== */
+    .result-card { animation: slideUp 0.3s ease; }
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .result-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 16px;
+    }
+    .result-header .card-title { font-size: 15px; }
+
+    .result-stats {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+      gap: 10px; margin-bottom: 18px;
+    }
+    .stat-box {
+      background: var(--bg-input); border-radius: var(--radius-sm);
+      padding: 14px 16px; text-align: center;
+    }
+    .stat-value {
+      font-size: 24px; font-weight: 700; color: var(--text-primary);
+      letter-spacing: -0.02em; line-height: 1.1;
+    }
+    .stat-label {
+      font-size: 11px; color: var(--text-tertiary); margin-top: 4px;
+      text-transform: uppercase; letter-spacing: 0.04em; font-weight: 500;
+    }
+
+    .result-json {
+      background: var(--bg-result); color: var(--text-inverse);
+      padding: 18px 20px; border-radius: var(--radius-md);
+      overflow-x: auto; font-size: 12px; line-height: 1.6;
+      font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+      max-height: 420px; overflow-y: auto;
+    }
+
+    .inspect-box {
+      background: var(--bg-input); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); padding: 14px 16px; font-size: 13px;
+    }
+    .inspect-box h4 { font-size: 13px; font-weight: 600; margin-bottom: 8px; color: var(--text-primary); }
+    .inspect-fields {
+      display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px;
+    }
+    .inspect-field {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 4px 10px; background: #fff; border: 1px solid var(--border);
+      border-radius: var(--radius-full); font-size: 12px; color: var(--text-primary);
+      cursor: pointer; transition: all 0.15s;
+    }
+    .inspect-field:hover { border-color: var(--accent); color: var(--accent); }
+    .inspect-field .type { color: var(--text-tertiary); font-size: 11px; }
+    .inspect-sample {
+      background: var(--bg-result); color: var(--text-inverse);
+      padding: 12px 14px; border-radius: var(--radius-sm);
+      font-family: 'SF Mono', monospace; font-size: 11px;
+      overflow-x: auto; max-height: 260px; overflow-y: auto; line-height: 1.55;
+    }
+
+    /* ===== Spinner ===== */
+    .spinner {
+      display: inline-block; width: 16px; height: 16px;
+      border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ===== Responsive ===== */
+    @media (max-width: 540px) {
+      .hero h1 { font-size: 22px; }
+      .mode-selector { grid-template-columns: 1fr; }
+      .card { padding: 20px; }
+      .btn-group { flex-direction: column; }
+      .btn-group .btn { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <header class="header">
+    <div class="header-inner">
+      <div class="logo-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+          <line x1="16" y1="2" x2="16" y2="6"/>
+          <line x1="8" y1="2" x2="8" y2="6"/>
+          <line x1="3" y1="10" x2="21" y2="10"/>
+        </svg>
+      </div>
+      <span class="header-title">飞扬俱乐部排班系统</span>
+      <span class="header-tag">大修活动</span>
+    </div>
+  </header>
+
+  <!-- Main -->
+  <main class="main">
+
+    <!-- Hero -->
+    <section class="hero">
+      <h1>大修活动自动化排班</h1>
+      <p>连接飞书多维表格，一键读取报名数据、按规则自动排班并回填结果。</p>
+    </section>
+
+    <!-- Progress pills -->
+    <div class="steps">
+      <div class="step-pill" id="step1"></div>
+      <div class="step-pill" id="step2"></div>
+      <div class="step-pill" id="step3"></div>
+    </div>
+
+    <!-- Card 1: Connect -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-step">1</div>
+        <div class="card-title">连接数据表</div>
+      </div>
+
+      <label class="field-label" for="url">多维表格 URL</label>
+      <input id="url" type="text" placeholder="粘贴飞书多维表格链接…" />
+      <div class="hint">需具备该多维表格的管理者权限，且应用已加入该文档的协作者。</div>
+
+      <div class="btn-group">
+        <button id="loadBtn" class="btn btn-primary" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.66 0 3-4.03 3-9s-1.34-9-3-9m0 18c-1.66 0-3-4.03-3-9s1.34-9 3-9"/></svg>
+          加载数据表
+        </button>
+      </div>
+
+      <div id="tableBlock" style="display:none; margin-top: 18px;">
+        <label class="field-label" for="tableSel">选择数据表</label>
+        <select id="tableSel"></select>
+        <div class="table-selected-tag" id="tableTag" style="display:none;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          <span id="tableTagText">已选中</span>
+        </div>
+        <div style="margin-top: 12px;">
+          <button id="inspectBtn" class="btn btn-ghost" type="button" style="padding: 8px 16px; font-size: 13px;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            查看字段（排错用）
+          </button>
+        </div>
+        <div id="inspectResult" style="display:none; margin-top: 14px;"></div>
+      </div>
+
+      <div id="err1" class="error-msg"></div>
+    </div>
+
+    <!-- Card 2: Configure & Run -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-step">2</div>
+        <div class="card-title">配置排班</div>
+      </div>
+
+      <label class="field-label">排班类型</label>
+      <div class="mode-selector">
+        <label class="mode-option">
+          <input type="radio" name="mode" value="staff" checked />
+          <div class="mode-card">
+            <div class="mode-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+            </div>
+            <div class="mode-label">干事排班</div>
+            <div class="mode-desc">分配时段 + 点位</div>
+          </div>
+        </label>
+        <label class="mode-option">
+          <input type="radio" name="mode" value="technician" />
+          <div class="mode-card">
+            <div class="mode-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>
+            </div>
+            <div class="mode-label">技术员排班</div>
+            <div class="mode-desc">仅分配时段</div>
+          </div>
+        </label>
+      </div>
+
+      <div class="toggle-row">
+        <div class="toggle" id="dryRunToggle"></div>
+        <span class="toggle-label" id="dryRunLabel">仅预览，不写回表格</span>
+        <input type="hidden" id="dryRun" value="0" />
+      </div>
+
+      <details>
+        <summary>自定义字段名映射</summary>
+        <div id="staffFields" class="field-grid">
+          <div><label class="field-label">姓名字段</label><input type="text" data-key="name" placeholder="姓名" /></div>
+          <div><label class="field-label">性别字段</label><input type="text" data-key="gender" placeholder="性别" /></div>
+          <div><label class="field-label">部门字段</label><input type="text" data-key="department" placeholder="部门" /></div>
+          <div><label class="field-label">报名时间段</label><input type="text" data-key="applied_slots" placeholder="报名时间段" /></div>
+          <div><label class="field-label">安排时间段</label><input type="text" data-key="assigned_slot" placeholder="安排时间段" /></div>
+          <div><label class="field-label">安排位置</label><input type="text" data-key="assigned_position" placeholder="安排位置" /></div>
+        </div>
+        <div id="techFields" class="field-grid" style="display:none;">
+          <div><label class="field-label">姓名字段</label><input type="text" data-key="name" placeholder="姓名" /></div>
+          <div><label class="field-label">报名时间段</label><input type="text" data-key="applied_slots" placeholder="报名时间段" /></div>
+          <div><label class="field-label">安排时间段</label><input type="text" data-key="assigned_slot" placeholder="安排时间段" /></div>
+        </div>
+      </details>
+
+      <div class="btn-group">
+        <button id="runBtn" class="btn btn-accent" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          执行排班
+        </button>
+        <button id="clearBtn" class="btn btn-ghost" type="button">清空结果</button>
+      </div>
+
+      <div id="err2" class="error-msg"></div>
+    </div>
+
+    <!-- Card 3: Result -->
+    <div id="resultCard" class="card result-card" style="display:none;">
+      <div class="card-header">
+        <div class="card-step">3</div>
+        <div class="card-title">排班结果</div>
+      </div>
+
+      <div id="resultStats" class="result-stats"></div>
+      <div id="resultMsg" class="success-msg" style="display:none;"></div>
+      <pre class="result-json" id="result"></pre>
+    </div>
+
+  </main>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+    let appToken = null;
+
+    /* ---- Step pills ---- */
+    function updateSteps(n) {
+      for (let i = 1; i <= 3; i++) {
+        const el = $('step' + i);
+        el.className = 'step-pill' + (i === n ? ' active' : i < n ? ' done' : '');
+      }
+    }
+    updateSteps(1);
+
+    /* ---- Mode toggle ---- */
+    document.querySelectorAll('input[name=mode]').forEach(el => {
+      el.addEventListener('change', () => {
+        const mode = document.querySelector('input[name=mode]:checked').value;
+        $('staffFields').style.display = mode === 'staff' ? '' : 'none';
+        $('techFields').style.display = mode === 'technician' ? '' : 'none';
+      });
+    });
+
+    /* ---- Dry-run toggle ---- */
+    $('dryRunToggle').addEventListener('click', () => {
+      const t = $('dryRunToggle');
+      const active = t.classList.toggle('active');
+      $('dryRun').value = active ? '1' : '0';
+    });
+    $('dryRunLabel').addEventListener('click', () => $('dryRunToggle').click());
+
+    /* ---- Load tables ---- */
+    $('loadBtn').addEventListener('click', async () => {
+      const url = $('url').value.trim();
+      $('err1').innerText = '';
+      if (!url) { $('err1').innerText = '请先填写多维表格 URL'; return; }
+      const btn = $('loadBtn');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span> 加载中…';
+      try {
+        const res = await fetch('/api/tables', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url }),
+        });
+        const data = await res.json();
+        if (!data.ok) { $('err1').innerText = data.error; return; }
+        appToken = data.app_token;
+        const sel = $('tableSel');
+        sel.innerHTML = '';
+        for (const t of data.tables) {
+          const opt = document.createElement('option');
+          opt.value = t.table_id;
+          opt.innerText = t.name;
+          if (data.preselected_table_id && t.table_id === data.preselected_table_id) opt.selected = true;
+          sel.appendChild(opt);
+        }
+        $('tableBlock').style.display = '';
+        updateTableTag();
+        sel.addEventListener('change', updateTableTag);
+        updateSteps(2);
+      } catch (e) {
+        $('err1').innerText = '请求失败：' + e.message;
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><path d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.66 0 3-4.03 3-9s-1.34-9-3-9m0 18c-1.66 0-3-4.03-3-9s1.34-9 3-9"/></svg> 加载数据表';
+      }
+    });
+
+    function updateTableTag() {
+      const sel = $('tableSel');
+      if (sel.value) {
+        $('tableTag').style.display = 'inline-flex';
+        $('tableTagText').innerText = sel.options[sel.selectedIndex].text;
+      }
+    }
+
+    /* ---- Inspect fields ---- */
+    const TYPE_MAP = {
+      1: '文本', 2: '数字', 3: '单选', 4: '多选', 5: '日期',
+      7: '复选框', 11: '人员', 13: '电话', 15: '链接', 17: '附件',
+      18: '关联', 19: '查找', 20: '公式', 21: '双向关联',
+      22: '地理位置', 23: '群组', 1001: '创建时间', 1002: '修改时间',
+      1003: '创建人', 1004: '修改人', 1005: '自动编号',
+    };
+    $('inspectBtn').addEventListener('click', async () => {
+      const tableId = $('tableSel').value;
+      if (!appToken || !tableId) return;
+      const btn = $('inspectBtn');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner" style="border-color:rgba(0,0,0,.2);border-top-color:#1A1714"></span> 读取中…';
+      try {
+        const res = await fetch('/api/inspect', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ app_token: appToken, table_id: tableId }),
+        });
+        const data = await res.json();
+        const box = $('inspectResult');
+        if (!data.ok) { box.innerHTML = `<div class="error-msg">${data.error}</div>`; box.style.display = ''; return; }
+        const chips = data.fields.map(f =>
+          `<span class="inspect-field" data-name="${f.name}" title="点击复制"><strong>${f.name}</strong><span class="type">·${TYPE_MAP[f.type] || 'type ' + f.type}</span></span>`
+        ).join('');
+        const sample = JSON.stringify(data.samples, null, 2);
+        box.innerHTML = `
+          <div class="inspect-box">
+            <h4>共 ${data.total_records} 条记录，字段清单（点击复制到剪贴板）：</h4>
+            <div class="inspect-fields">${chips}</div>
+            <h4>前 3 条样本（原始字段值）：</h4>
+            <pre class="inspect-sample">${sample.replace(/</g, '&lt;')}</pre>
+            <div class="hint" style="margin-top:10px;">👉 把真实字段名填入下方「自定义字段名映射」里即可。重点看"报名时间段"对应的真实字段名和值的结构。</div>
+          </div>`;
+        box.style.display = '';
+        box.querySelectorAll('.inspect-field').forEach(el => {
+          el.addEventListener('click', () => {
+            navigator.clipboard?.writeText(el.dataset.name);
+            el.style.background = 'var(--accent-subtle)';
+            setTimeout(() => el.style.background = '', 600);
+          });
+        });
+      } catch (e) {
+        $('inspectResult').innerHTML = `<div class="error-msg">请求失败：${e.message}</div>`;
+        $('inspectResult').style.display = '';
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> 查看字段（排错用）';
+      }
+    });
+
+    /* ---- Run schedule ---- */
+    $('runBtn').addEventListener('click', async () => {
+      const mode = document.querySelector('input[name=mode]:checked').value;
+      const tableId = ($('tableSel') || {}).value;
+      $('err2').innerText = '';
+      if (!appToken || !tableId) { $('err2').innerText = '请先在步骤 1 中加载并选择数据表'; return; }
+
+      const fieldsRoot = mode === 'staff' ? $('staffFields') : $('techFields');
+      const fields = {};
+      fieldsRoot.querySelectorAll('input[data-key]').forEach(el => {
+        const v = el.value.trim();
+        if (v) fields[el.dataset.key] = v;
+      });
+
+      const btn = $('runBtn');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span> 排班中…';
+      $('result').innerText = '';
+      $('resultStats').innerHTML = '';
+      $('resultMsg').style.display = 'none';
+      $('resultCard').style.display = '';
+      updateSteps(3);
+
+      try {
+        const res = await fetch('/api/schedule', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            app_token: appToken,
+            table_id: tableId,
+            mode,
+            dry_run: $('dryRun').value === '1',
+            fields,
+          }),
+        });
+        const data = await res.json();
+        renderResult(data, mode);
+        if (!data.ok) { $('err2').innerText = data.error || '执行失败'; }
+      } catch (e) {
+        $('err2').innerText = '请求失败：' + e.message;
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><polygon points="5 3 19 12 5 21 5 3"/></svg> 执行排班';
+      }
+    });
+
+    function renderResult(data, mode) {
+      // Stats
+      const stats = $('resultStats');
+      stats.innerHTML = '';
+      if (data.ok) {
+        const assigned = (data.assignments || []).length;
+        const skipped = data.skipped_count || 0;
+        const unassigned = (data.unassigned || []).length;
+        const written = data.written || 0;
+        const items = [
+          { value: assigned, label: '已分配' },
+          { value: skipped, label: '已跳过' },
+          { value: unassigned, label: '未分配' },
+        ];
+        if (!data.dry_run) items.push({ value: written, label: '已写回' });
+        items.forEach(({ value, label }) => {
+          stats.innerHTML += `<div class="stat-box"><div class="stat-value">${value}</div><div class="stat-label">${label}</div></div>`;
+        });
+
+        const msg = $('resultMsg');
+        if (data.dry_run) {
+          msg.innerText = '预览模式：结果未写回到表格，确认无误后取消预览模式再执行。';
+          msg.style.display = 'flex';
+        } else if (written > 0) {
+          msg.innerText = `已成功将 ${written} 条排班结果写回飞书多维表格。`;
+          msg.style.display = 'flex';
+        }
+      }
+      $('result').innerText = JSON.stringify(data, null, 2);
+    }
+
+    /* ---- Clear ---- */
+    $('clearBtn').addEventListener('click', () => {
+      $('result').innerText = '';
+      $('resultStats').innerHTML = '';
+      $('resultMsg').style.display = 'none';
+      $('resultCard').style.display = 'none';
+      $('err2').innerText = '';
+      updateSteps(appToken ? 2 : 1);
+    });
+  </script>
+</body>
+</html>
