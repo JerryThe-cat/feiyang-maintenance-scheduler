@@ -1,0 +1,21 @@
+[Unit]
+Description=Feiyang Maintenance Scheduler (大修活动自动化排班)
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/opt/feiyang-maintenance-scheduler
+EnvironmentFile=/opt/feiyang-maintenance-scheduler/.env
+ExecStart=/opt/feiyang-maintenance-scheduler/.venv/bin/gunicorn \
+    --workers 2 \
+    --bind 127.0.0.1:5000 \
+    --access-logfile /var/log/feiyang-maintenance-scheduler/access.log \
+    --error-logfile /var/log/feiyang-maintenance-scheduler/error.log \
+    app:app
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

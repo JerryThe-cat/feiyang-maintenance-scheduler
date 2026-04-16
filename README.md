@@ -1,30 +1,38 @@
-# 飞扬俱乐部大修活动自动化排班脚本
+# feiyang-maintenance-scheduler
 
-基于飞书开放平台的企业自建应用，一键读取指定多维表格 → 按规则自动排班 → 回填结果。
+> 仓库：https://github.com/JerryThe-cat/feiyang-maintenance-scheduler
+
+飞扬俱乐部大修活动自动化排班工具，基于飞书开放平台的企业自建应用：读取指定多维表格 → 按规则自动排班 → 回填结果。
 
 ## 项目结构
 
 ```
-大修活动自动化排班脚本/
-├── 需求说明.md          # 原始需求文档
-├── requirements.txt     # Python 依赖
-├── .env / .env.example  # 飞书凭证（.env 不提交到仓库）
-├── config.py            # 常量 + 配置加载
-├── feishu_client.py     # 飞书 API 客户端（鉴权 + Bitable 读写）
-├── scheduler.py         # 排班核心算法（干事 / 技术员）
-├── app.py               # Flask Web 应用（一键排班界面）
-├── main.py              # CLI 入口（命令行直接排班）
-├── templates/index.html # Web UI
-└── tests/test_scheduler.py  # 离线单元测试（无需飞书）
+feiyang-maintenance-scheduler/
+├── 需求说明.md                 # 原始需求文档
+├── requirements.txt            # Python 依赖
+├── .env / .env.example         # 飞书凭证（.env 不提交到仓库）
+├── config.py                   # 常量 + 配置加载
+├── feishu_client.py            # 飞书 API 客户端（鉴权 + Bitable 读写）
+├── scheduler.py                # 排班核心算法（干事 / 技术员）
+├── app.py                      # Flask Web 应用（一键排班界面）
+├── main.py                     # CLI 入口（命令行直接排班）
+├── templates/index.html        # Web UI
+├── tests/test_scheduler.py     # 离线单元测试（无需飞书）
+└── deploy/
+    ├── DEPLOY.md                                # 生产环境部署手册
+    ├── feiyang-maintenance-scheduler.service    # systemd 服务单元
+    └── nginx.conf                               # Nginx 反向代理配置
 ```
 
-## 一、环境准备
+## 一、本地开发 / 自用
 
 ```bash
-cd "大修活动自动化排班脚本"
+git clone https://github.com/JerryThe-cat/feiyang-maintenance-scheduler.git
+cd feiyang-maintenance-scheduler
 python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env   # 按需修改 App ID / Secret
+python app.py          # 打开 http://127.0.0.1:5000
 ```
 
 > ⚠️ **安全提醒**：`.env` 中的 `FEISHU_APP_SECRET` 为敏感凭证，已在 `.gitignore` 中过滤。如 Secret 泄露，请在飞书开发者后台重置。
@@ -101,7 +109,16 @@ python -m tests.test_scheduler
 - **飞书返回 99991663 / 99991672**：说明 App ID/Secret 错误或 IP 白名单未配置。
 - **没有修改权限**：需在飞书多维表格中把应用加为协作者并授予"可编辑"。
 
-## 八、待确认项（开发期可再对齐）
+## 八、部署到云服务器 + 接入飞书工作台
+
+生产环境部署、HTTPS 证书申请、飞书「网页应用」配置详见 **[deploy/DEPLOY.md](deploy/DEPLOY.md)**。一句话流程：
+
+```
+克隆仓库 → venv 安装依赖 → 配置 .env → systemd 启动 gunicorn →
+nginx 反向代理 + certbot HTTPS → 飞书开发者后台填首页 URL → 发布
+```
+
+## 九、待确认项（开发期可再对齐）
 
 见 `需求说明.md` 第五节：
 - 字段名与实际表格是否完全一致（Web UI 支持手动指定）
