@@ -131,12 +131,43 @@ def test_tech_respect_applied():
     print("[tech_applied] OK")
 
 
+def test_custom_hourly_slots_for_staff():
+    """验证 schedule_staff 支持自定义 1 小时时段。"""
+    custom = [
+        "8:00 - 9:00", "9:00 - 10:00", "10:00 - 11:00", "11:00 - 12:00",
+    ]
+    applicants = [
+        _make_staff(1, "男", ["维修部"], custom),
+        _make_staff(2, "男", ["维修部"], custom),
+        _make_staff(3, "男", ["研发部"], [custom[0], custom[-1]]),
+        _make_staff(4, "女", ["行政部"], custom),
+    ]
+    result = schedule_staff(applicants, time_slots=custom)
+    assert result.summary["首末时段"] == sorted([custom[0], custom[-1]]), result.summary
+    assigned = {a.record_id for a in result.assignments}
+    assert len(assigned) == 4, assigned
+    print("[staff_custom_hourly] OK")
+
+
+def test_custom_slots_for_technicians():
+    """验证技术员支持自定义时段（如调整起止时间）。"""
+    shifted = ["10:00 - 12:00", "12:00 - 14:00", "14:00 - 16:00", "16:00 - 18:00"]
+    applicants = [TechApplicant(f"t{i:02d}", f"T{i}", shifted) for i in range(8)]
+    result = schedule_technicians(applicants, time_slots=shifted)
+    counts = result.summary["各时段人数"]
+    assert set(counts.keys()) == set(shifted), counts
+    assert all(v == 2 for v in counts.values()), counts
+    print("[tech_custom_slots] OK")
+
+
 def main() -> None:
     test_slot_normalization()
     test_staff_basic()
     test_staff_skip_existing()
     test_tech_balance()
     test_tech_respect_applied()
+    test_custom_hourly_slots_for_staff()
+    test_custom_slots_for_technicians()
     print("\n所有用例通过")
 
 
